@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TraffiKing - Traffic Generator Pro</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="crown">👑</span>
+                <h1>TraffiKing</h1>
+            </div>
+            <p class="subtitle">Professional Web Traffic Generator with Proxy Support</p>
+            <div class="warning">
+                ⚠️ Educational Tool - Use Responsibly on Your Own Websites Only
+            </div>
+        </header>
+
+        <main>
+            <!-- Configuration Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>⚙️ Configuration</h2>
+                </div>
+                
+                <div class="form-group">
+                    <label for="targetUrl">🎯 Target URL</label>
+                    <input type="url" id="targetUrl" placeholder="https://example.blogspot.com" required>
+                    <small>Enter the website URL you want to generate traffic for</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="sessions">📊 Sessions</label>
+                        <input type="number" id="sessions" value="5" min="1" max="50">
+                        <small>Number of browsing sessions</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="pagesPerSession">📄 Pages/Session</label>
+                        <input type="number" id="pagesPerSession" value="3" min="1" max="10">
+                        <small>Pages to visit per session</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="delayMin">⏱️ Min Delay (s)</label>
+                        <input type="number" id="delayMin" value="5" min="1" max="60">
+                        <small>Minimum wait time</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="delayMax">⏱️ Max Delay (s)</label>
+                        <input type="number" id="delayMax" value="15" min="1" max="120">
+                        <small>Maximum wait time</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proxy Configuration -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔒 Proxy Configuration</h2>
+                </div>
+                
+                <div class="proxy-options">
+                    <label class="radio-option">
+                        <input type="radio" name="proxySource" value="none" checked>
+                        <span>
+                            <strong>🌐 No Proxy</strong>
+                            <small>Direct connection (not recommended for high volume)</small>
+                        </span>
+                    </label>
+                    
+                    <label class="radio-option">
+                        <input type="radio" name="proxySource" value="auto">
+                        <span>
+                            <strong>🤖 Auto-Fetch Free Proxies</strong>
+                            <small>Automatically fetch proxies from public sources</small>
+                        </span>
+                    </label>
+                    
+                    <label class="radio-option">
+                        <input type="radio" name="proxySource" value="manual">
+                        <span>
+                            <strong>✍️ Manual Proxy List</strong>
+                            <small>Enter your own proxy list</small>
+                        </span>
+                    </label>
+                </div>
+
+                <div id="manualProxySection" class="hidden">
+                    <label for="proxyList">📋 Proxy List (one per line)</label>
+                    <textarea id="proxyList" rows="6" placeholder="123.45.67.89:8080&#10;98.76.54.32:3128&#10;http://user:pass@11.22.33.44:80"></textarea>
+                    <small>Supported formats: ip:port, ip:port:user:pass, http://ip:port</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="testProxies" checked>
+                        <span>🧪 Test proxies before use (recommended)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Advanced Options -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🎯 Advanced Options</h2>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="randomTiming" checked>
+                        <span>🎲 Randomize timing patterns</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="followLinks" checked>
+                        <span>🔗 Follow internal links</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="rotateUserAgents" checked>
+                        <span>🔄 Rotate user agents</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="controls">
+                <button id="fetchProxiesBtn" class="btn btn-secondary">
+                    🔄 Fetch Free Proxies
+                </button>
+                <button id="startBtn" class="btn btn-primary">
+                    👑 Start TraffiKing
+                </button>
+                <button id="stopBtn" class="btn btn-danger hidden">
+                    ⏹️ Stop
+                </button>
+            </div>
+
+            <!-- Status Panel -->
+            <div id="statusPanel" class="card hidden">
+                <div class="card-header">
+                    <h2>📊 Live Status</h2>
+                </div>
+                <div id="statusContent">
+                    <div class="status-item">
+                        <span class="label">Status:</span>
+                        <span id="statusText" class="value badge">Idle</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Progress:</span>
+                        <span id="progressText" class="value">0/0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Success Rate:</span>
+                        <span id="successRate" class="value">0%</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Active Proxies:</span>
+                        <span id="activeProxies" class="value">0</span>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Logs Panel -->
+            <div id="logsPanel" class="card hidden">
+                <div class="card-header">
+                    <h2>📝 Activity Logs</h2>
+                    <button id="clearLogsBtn" class="btn btn-secondary btn-sm">Clear</button>
+                </div>
+                <div id="logs" class="logs-container"></div>
+            </div>
+
+            <!-- Statistics Panel -->
+            <div id="statsPanel" class="card hidden">
+                <div class="card-header">
+                    <h2>📈 Statistics</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-value" id="totalRequests">0</div>
+                        <div class="stat-label">Total Requests</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-value" id="successfulRequests">0</div>
+                        <div class="stat-label">Successful</div>
+                    </div>
+                    <div class="stat-card error">
+                        <div class="stat-icon">❌</div>
+                        <div class="stat-value" id="failedRequests">0</div>
+                        <div class="stat-label">Failed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-value" id="avgResponseTime">0ms</div>
+                        <div class="stat-label">Avg Response</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proxy Statistics -->
+            <div id="proxyStatsPanel" class="card hidden">
+                <div class="card-header">
+                    <h2>🔒 Proxy Statistics</h2>
+                </div>
+                <div id="proxyStats" class="proxy-stats-container"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>👑 <strong>TraffiKing</strong> - Professional Traffic Generator</p>
+            <p>⚠️ Educational Tool - Use Only on Websites You Own</p>
+            <p>Made with ❤️ for Educational Purposes | © 2024</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
