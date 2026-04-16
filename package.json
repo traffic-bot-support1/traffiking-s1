@@ -1,0 +1,19 @@
+{
+  "name": "traffiking",
+  "version": "1.0.0",
+  "description": "TraffiKing - Professional Traffic Generator with Proxy Support",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "traffic",
+    "generator",
+    "proxy",
+    "web",
+    "educational"
+  ],
+  "author": "TraffiKing",
+  "license": "MIT"
+}
