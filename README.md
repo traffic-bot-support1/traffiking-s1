@@ -78,7 +78,7 @@ Contributions welcome! Please read our contributing guidelines.
 
 For questions or support, please open an issue.
 
----
+--- 💌 akash.afnan112233@gmail.com
 
 **Made with ❤️ for Educational Purposes**
 
