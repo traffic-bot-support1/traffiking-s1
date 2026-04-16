@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TraffiKing - Traffic Generator Pro</title>
+    <title>TraffiKing - Post-Specific Traffic Generator</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
@@ -15,9 +15,9 @@
                 <span class="crown">👑</span>
                 <h1>TraffiKing</h1>
             </div>
-            <p class="subtitle">Professional Web Traffic Generator with Proxy Support</p>
+            <p class="subtitle">Professional Post-Specific Traffic Generator with Proxy Support</p>
             <div class="warning">
-                ⚠️ Educational Tool - Use Responsibly on Your Own Websites Only
+                ⚠️ Educational Tool - Use Responsibly on Your Own Blog Posts Only
             </div>
         </header>
 
@@ -25,39 +25,114 @@
             <!-- Configuration Panel -->
             <div class="card">
                 <div class="card-header">
-                    <h2>⚙️ Configuration</h2>
+                    <h2>⚙️ Traffic Configuration</h2>
+                </div>
+
+                <div class="form-group">
+                    <label for="trafficMode">📌 Traffic Mode</label>
+                    <select id="trafficMode" class="form-select">
+                        <option value="single">Single Post/Page (Focused)</option>
+                        <option value="multiple">Multiple Posts (Diversified)</option>
+                        <option value="homepage">Homepage + Posts (Natural)</option>
+                    </select>
+                    <small>Choose how to distribute traffic</small>
                 </div>
                 
                 <div class="form-group">
-                    <label for="targetUrl">🎯 Target URL</label>
-                    <input type="url" id="targetUrl" placeholder="https://example.blogspot.com" required>
-                    <small>Enter the website URL you want to generate traffic for</small>
+                    <label for="targetUrl">🎯 Primary Target URL</label>
+                    <input type="url" id="targetUrl" placeholder="https://yourblog.blogspot.com/2024/01/your-post.html" required>
+                    <small>Enter your main Blogspot post or page URL</small>
+                </div>
+
+                <div id="multipleUrlsSection" class="hidden">
+                    <label for="additionalUrls">📋 Additional Post URLs (one per line)</label>
+                    <textarea id="additionalUrls" rows="5" placeholder="https://yourblog.blogspot.com/2024/01/post-1.html&#10;https://yourblog.blogspot.com/2024/01/post-2.html&#10;https://yourblog.blogspot.com/2024/01/post-3.html"></textarea>
+                    <small>Add more posts to distribute traffic naturally</small>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="sessions">📊 Sessions</label>
-                        <input type="number" id="sessions" value="5" min="1" max="50">
-                        <small>Number of browsing sessions</small>
+                        <label for="sessions">📊 Total Sessions</label>
+                        <input type="number" id="sessions" value="10" min="1" max="100">
+                        <small>Number of unique visits</small>
                     </div>
                     <div class="form-group">
                         <label for="pagesPerSession">📄 Pages/Session</label>
                         <input type="number" id="pagesPerSession" value="3" min="1" max="10">
-                        <small>Pages to visit per session</small>
+                        <small>Pages viewed per visit</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="timeOnPage">⏱️ Time on Page (seconds)</label>
+                        <input type="number" id="timeOnPage" value="30" min="5" max="300">
+                        <small>How long to "read" each post</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="scrollDepth">📜 Scroll Depth (%)</label>
+                        <input type="number" id="scrollDepth" value="70" min="0" max="100">
+                        <small>Simulate scrolling behavior</small>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="delayMin">⏱️ Min Delay (s)</label>
-                        <input type="number" id="delayMin" value="5" min="1" max="60">
-                        <small>Minimum wait time</small>
+                        <input type="number" id="delayMin" value="10" min="1" max="60">
+                        <small>Minimum wait between sessions</small>
                     </div>
                     <div class="form-group">
                         <label for="delayMax">⏱️ Max Delay (s)</label>
-                        <input type="number" id="delayMax" value="15" min="1" max="120">
-                        <small>Maximum wait time</small>
+                        <input type="number" id="delayMax" value="30" min="1" max="120">
+                        <small>Maximum wait between sessions</small>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="referrerType">🔗 Referrer Source</label>
+                    <select id="referrerType" class="form-select">
+                        <option value="mixed">Mixed (Realistic)</option>
+                        <option value="google">Google Search</option>
+                        <option value="social">Social Media</option>
+                        <option value="direct">Direct Traffic</option>
+                    </select>
+                    <small>Where visitors "come from"</small>
+                </div>
+            </div>
+
+            <!-- Engagement Simulation -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>👆 Engagement Simulation</h2>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="simulateClicks" checked>
+                        <span>🖱️ Simulate clicks on post content</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="simulateScroll" checked>
+                        <span>📜 Simulate natural scrolling</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="varyReadingTime" checked>
+                        <span>⏰ Vary reading time (more realistic)</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="visitRelatedPosts" checked>
+                        <span>🔗 Visit related posts (if found)</span>
+                    </label>
                 </div>
             </div>
 
@@ -224,8 +299,8 @@
         </main>
 
         <footer>
-            <p>👑 <strong>TraffiKing</strong> - Professional Traffic Generator</p>
-            <p>⚠️ Educational Tool - Use Only on Websites You Own</p>
+            <p>👑 <strong>TraffiKing v2.0</strong> - Post-Specific Traffic Generator</p>
+            <p>⚠️ Educational Tool - Use Only on Your Own Blog Posts</p>
             <p>Made with ❤️ for Educational Purposes | © 2024</p>
         </footer>
     </div>
