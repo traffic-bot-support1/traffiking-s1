@@ -145,6 +145,31 @@ h1 {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
+.form-select {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: var(--bg-color);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.3s;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-select option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    padding: 0.5rem;
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -219,7 +244,8 @@ small {
     margin-top: 0.25rem;
 }
 
-#manualProxySection textarea {
+#manualProxySection textarea,
+#additionalUrls {
     font-family: 'Courier New', monospace;
     font-size: 0.9rem;
     min-height: 150px;
