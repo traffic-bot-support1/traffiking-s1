@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TraffiKing - Post-Specific Traffic Generator</title>
+    <title>TraffiKing v3.0 - Auto Blogspot Traffic Generator</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
@@ -14,51 +14,80 @@
             <div class="logo">
                 <span class="crown">👑</span>
                 <h1>TraffiKing</h1>
+                <span class="version">v3.0</span>
             </div>
-            <p class="subtitle">Professional Post-Specific Traffic Generator with Proxy Support</p>
+            <p class="subtitle">Automated Blogspot Traffic Generator with Proxifly Integration</p>
             <div class="warning">
-                ⚠️ Educational Tool - Use Responsibly on Your Own Blog Posts Only
+                ⚠️ Educational Tool - Use Only on Your Own Blogspot Sites
             </div>
         </header>
 
         <main>
-            <!-- Configuration Panel -->
+            <!-- Quick Start Mode -->
+            <div class="card highlight">
+                <div class="card-header">
+                    <h2>🚀 Quick Start - Auto Mode</h2>
+                </div>
+
+                <div class="form-group">
+                    <label for="blogspotUrl">📝 Your Blogspot URL</label>
+                    <input type="url" id="blogspotUrl" placeholder="https://allai-info.blogspot.com" value="https://allai-info.blogspot.com">
+                    <small>Enter your Blogspot site URL (we'll auto-fetch all posts)</small>
+                </div>
+
+                <div class="quick-actions">
+                    <button id="fetchPostsBtn" class="btn btn-secondary">
+                        📋 Fetch All Posts
+                    </button>
+                    <button id="autoModeBtn" class="btn btn-primary btn-large">
+                        ⚡ Start Auto Traffic (Full Automation)
+                    </button>
+                </div>
+
+                <div id="postsPreview" class="posts-preview hidden">
+                    <h3>📚 Found Posts:</h3>
+                    <div id="postsList" class="posts-list"></div>
+                </div>
+            </div>
+
+            <!-- Manual Configuration -->
             <div class="card">
                 <div class="card-header">
-                    <h2>⚙️ Traffic Configuration</h2>
+                    <h2>⚙️ Manual Configuration</h2>
                 </div>
 
                 <div class="form-group">
                     <label for="trafficMode">📌 Traffic Mode</label>
                     <select id="trafficMode" class="form-select">
-                        <option value="single">Single Post/Page (Focused)</option>
-                        <option value="multiple">Multiple Posts (Diversified)</option>
-                        <option value="homepage">Homepage + Posts (Natural)</option>
+                        <option value="auto-random">Auto Random Posts (Recommended)</option>
+                        <option value="single">Single Post/Page</option>
+                        <option value="multiple">Multiple Specific Posts</option>
+                        <option value="homepage">Homepage + Posts</option>
                     </select>
-                    <small>Choose how to distribute traffic</small>
+                    <small>Choose traffic distribution strategy</small>
                 </div>
                 
-                <div class="form-group">
-                    <label for="targetUrl">🎯 Primary Target URL</label>
-                    <input type="url" id="targetUrl" placeholder="https://yourblog.blogspot.com/2024/01/your-post.html" required>
-                    <small>Enter your main Blogspot post or page URL</small>
+                <div class="form-group" id="singleUrlGroup">
+                    <label for="targetUrl">🎯 Target URL</label>
+                    <input type="url" id="targetUrl" placeholder="https://allai-info.blogspot.com/2024/01/post.html">
+                    <small>Specific post URL (only for single/homepage mode)</small>
                 </div>
 
                 <div id="multipleUrlsSection" class="hidden">
                     <label for="additionalUrls">📋 Additional Post URLs (one per line)</label>
-                    <textarea id="additionalUrls" rows="5" placeholder="https://yourblog.blogspot.com/2024/01/post-1.html&#10;https://yourblog.blogspot.com/2024/01/post-2.html&#10;https://yourblog.blogspot.com/2024/01/post-3.html"></textarea>
-                    <small>Add more posts to distribute traffic naturally</small>
+                    <textarea id="additionalUrls" rows="5" placeholder="https://allai-info.blogspot.com/2024/01/post-1.html&#10;https://allai-info.blogspot.com/2024/01/post-2.html"></textarea>
+                    <small>Add specific posts to target</small>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="sessions">📊 Total Sessions</label>
-                        <input type="number" id="sessions" value="10" min="1" max="100">
+                        <input type="number" id="sessions" value="20" min="1" max="200">
                         <small>Number of unique visits</small>
                     </div>
                     <div class="form-group">
                         <label for="pagesPerSession">📄 Pages/Session</label>
-                        <input type="number" id="pagesPerSession" value="3" min="1" max="10">
+                        <input type="number" id="pagesPerSession" value="4" min="1" max="10">
                         <small>Pages viewed per visit</small>
                     </div>
                 </div>
@@ -66,38 +95,82 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="timeOnPage">⏱️ Time on Page (seconds)</label>
-                        <input type="number" id="timeOnPage" value="30" min="5" max="300">
-                        <small>How long to "read" each post</small>
+                        <input type="number" id="timeOnPage" value="45" min="5" max="300">
+                        <small>Realistic reading time</small>
                     </div>
                     <div class="form-group">
                         <label for="scrollDepth">📜 Scroll Depth (%)</label>
-                        <input type="number" id="scrollDepth" value="70" min="0" max="100">
-                        <small>Simulate scrolling behavior</small>
+                        <input type="number" id="scrollDepth" value="75" min="0" max="100">
+                        <small>How much they "scroll"</small>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="delayMin">⏱️ Min Delay (s)</label>
-                        <input type="number" id="delayMin" value="10" min="1" max="60">
-                        <small>Minimum wait between sessions</small>
+                        <input type="number" id="delayMin" value="15" min="1" max="60">
+                        <small>Min wait between sessions</small>
                     </div>
                     <div class="form-group">
                         <label for="delayMax">⏱️ Max Delay (s)</label>
-                        <input type="number" id="delayMax" value="30" min="1" max="120">
-                        <small>Maximum wait between sessions</small>
+                        <input type="number" id="delayMax" value="45" min="1" max="120">
+                        <small>Max wait between sessions</small>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="referrerType">🔗 Referrer Source</label>
                     <select id="referrerType" class="form-select">
-                        <option value="mixed">Mixed (Realistic)</option>
-                        <option value="google">Google Search</option>
-                        <option value="social">Social Media</option>
-                        <option value="direct">Direct Traffic</option>
+                        <option value="mixed">Mixed (Most Realistic)</option>
+                        <option value="google">Google Search Only</option>
+                        <option value="social">Social Media Only</option>
+                        <option value="direct">Direct Traffic Only</option>
                     </select>
                     <small>Where visitors "come from"</small>
+                </div>
+            </div>
+
+            <!-- Proxy Configuration -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔒 Proxy Configuration (Proxifly)</h2>
+                </div>
+                
+                <div class="proxy-options">
+                    <label class="radio-option">
+                        <input type="radio" name="proxySource" value="auto" checked>
+                        <span>
+                            <strong>🤖 Auto-Fetch Proxifly Proxies (Recommended)</strong>
+                            <small>Fresh proxies updated every 5-15 minutes from Proxifly</small>
+                        </span>
+                    </label>
+                    
+                    <label class="radio-option">
+                        <input type="radio" name="proxySource" value="manual">
+                        <span>
+                            <strong>✍️ Manual Proxy List</strong>
+                            <small>Enter your own premium proxies</small>
+                        </span>
+                    </label>
+
+                    <label class="radio-option">
+                        <input type="radio" name="proxySource" value="none">
+                        <span>
+                            <strong>🌐 No Proxy (Direct)</strong>
+                            <small>Not recommended - may get blocked</small>
+                        </span>
+                    </label>
+                </div>
+
+                <div id="manualProxySection" class="hidden">
+                    <label for="proxyList">📋 Proxy List (one per line)</label>
+                    <textarea id="proxyList" rows="6" placeholder="123.45.67.89:8080&#10;98.76.54.32:3128"></textarea>
+                    <small>Format: ip:port</small>
+                </div>
+
+                <div class="proxy-status" id="proxyStatus">
+                    <span class="proxy-indicator">🔴</span>
+                    <span>No proxies loaded</span>
                 </div>
             </div>
 
@@ -109,15 +182,8 @@
                 
                 <div class="form-group">
                     <label class="checkbox-option">
-                        <input type="checkbox" id="simulateClicks" checked>
-                        <span>🖱️ Simulate clicks on post content</span>
-                    </label>
-                </div>
-
-                <div class="form-group">
-                    <label class="checkbox-option">
                         <input type="checkbox" id="simulateScroll" checked>
-                        <span>📜 Simulate natural scrolling</span>
+                        <span>📜 Simulate natural scrolling behavior</span>
                     </label>
                 </div>
 
@@ -131,81 +197,14 @@
                 <div class="form-group">
                     <label class="checkbox-option">
                         <input type="checkbox" id="visitRelatedPosts" checked>
-                        <span>🔗 Visit related posts (if found)</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Proxy Configuration -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>🔒 Proxy Configuration</h2>
-                </div>
-                
-                <div class="proxy-options">
-                    <label class="radio-option">
-                        <input type="radio" name="proxySource" value="none" checked>
-                        <span>
-                            <strong>🌐 No Proxy</strong>
-                            <small>Direct connection (not recommended for high volume)</small>
-                        </span>
-                    </label>
-                    
-                    <label class="radio-option">
-                        <input type="radio" name="proxySource" value="auto">
-                        <span>
-                            <strong>🤖 Auto-Fetch Free Proxies</strong>
-                            <small>Automatically fetch proxies from public sources</small>
-                        </span>
-                    </label>
-                    
-                    <label class="radio-option">
-                        <input type="radio" name="proxySource" value="manual">
-                        <span>
-                            <strong>✍️ Manual Proxy List</strong>
-                            <small>Enter your own proxy list</small>
-                        </span>
-                    </label>
-                </div>
-
-                <div id="manualProxySection" class="hidden">
-                    <label for="proxyList">📋 Proxy List (one per line)</label>
-                    <textarea id="proxyList" rows="6" placeholder="123.45.67.89:8080&#10;98.76.54.32:3128&#10;http://user:pass@11.22.33.44:80"></textarea>
-                    <small>Supported formats: ip:port, ip:port:user:pass, http://ip:port</small>
-                </div>
-
-                <div class="form-group">
-                    <label class="checkbox-option">
-                        <input type="checkbox" id="testProxies" checked>
-                        <span>🧪 Test proxies before use (recommended)</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Advanced Options -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>🎯 Advanced Options</h2>
-                </div>
-                
-                <div class="form-group">
-                    <label class="checkbox-option">
-                        <input type="checkbox" id="randomTiming" checked>
-                        <span>🎲 Randomize timing patterns</span>
-                    </label>
-                </div>
-
-                <div class="form-group">
-                    <label class="checkbox-option">
-                        <input type="checkbox" id="followLinks" checked>
-                        <span>🔗 Follow internal links</span>
+                        <span>🔗 Auto-visit related posts from same blog</span>
                     </label>
                 </div>
 
                 <div class="form-group">
                     <label class="checkbox-option">
                         <input type="checkbox" id="rotateUserAgents" checked>
-                        <span>🔄 Rotate user agents</span>
+                        <span>🔄 Rotate user agents (devices)</span>
                     </label>
                 </div>
             </div>
@@ -213,10 +212,10 @@
             <!-- Control Buttons -->
             <div class="controls">
                 <button id="fetchProxiesBtn" class="btn btn-secondary">
-                    🔄 Fetch Free Proxies
+                    🔄 Fetch Proxifly Proxies
                 </button>
                 <button id="startBtn" class="btn btn-primary">
-                    👑 Start TraffiKing
+                    👑 Start Manual Mode
                 </button>
                 <button id="stopBtn" class="btn btn-danger hidden">
                     ⏹️ Stop
@@ -244,6 +243,10 @@
                     <div class="status-item">
                         <span class="label">Active Proxies:</span>
                         <span id="activeProxies" class="value">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Posts Visited:</span>
+                        <span id="postsVisited" class="value">0</span>
                     </div>
                 </div>
                 <div class="progress-bar">
@@ -288,20 +291,12 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Proxy Statistics -->
-            <div id="proxyStatsPanel" class="card hidden">
-                <div class="card-header">
-                    <h2>🔒 Proxy Statistics</h2>
-                </div>
-                <div id="proxyStats" class="proxy-stats-container"></div>
-            </div>
         </main>
 
         <footer>
-            <p>👑 <strong>TraffiKing v2.0</strong> - Post-Specific Traffic Generator</p>
-            <p>⚠️ Educational Tool - Use Only on Your Own Blog Posts</p>
-            <p>Made with ❤️ for Educational Purposes | © 2024</p>
+            <p>👑 <strong>TraffiKing v3.0</strong> - Automated Blogspot Traffic Generator</p>
+            <p>🔗 Powered by <a href="https://proxifly.dev" target="_blank">Proxifly</a> Free Proxies</p>
+            <p>⚠️ Educational Tool - Use Only on Your Own Sites | © 2024</p>
         </footer>
     </div>
 
