@@ -2,15 +2,13 @@ name: TraffiKing Fork 1
 
 on:
   schedule:
-    # Offset by +3 hours from main
-    # Times: 3 AM, 11 AM, 7 PM UTC
     - cron: '0 3,11,19 * * *'
   workflow_dispatch:
   
 jobs:
   traffic-generation:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25  # ← CHANGED
     
     steps:
       - name: Checkout
