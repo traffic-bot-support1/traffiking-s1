@@ -1,15 +1,15 @@
-name: TraffiKing Auto Traffic Bot
+name: TraffiKing - GitHub Actions Bot
 
 on:
   schedule:
-    # Run every 3 hours
-    - cron: '0 */3 * * *'
+    # Run 3 times per day (every 8 hours) - Conservative
+    - cron: '0 0,8,16 * * *'  # 12 AM, 8 AM, 4 PM UTC
   workflow_dispatch: # Manual trigger
   
 jobs:
   generate-traffic:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     
     steps:
       - name: Checkout code
@@ -20,9 +20,20 @@ jobs:
         with:
           node-version: '18'
       
-      - name: Run Traffic Bot
+      - name: Run Traffic Bot (GitHub Mode)
         env:
           BLOG_URL: ${{ secrets.BLOG_URL || 'https://allai-info.blogspot.com' }}
-          SESSIONS: ${{ secrets.SESSIONS || '20' }}
-          PAGES_PER_SESSION: ${{ secrets.PAGES_PER_SESSION || '4' }}
+          PLATFORM: 'github'
+          SESSIONS: '12'  # Conservative for GitHub
+          PAGES_PER_SESSION: '3'
+          MIN_READ_TIME: '15'
+          MAX_READ_TIME: '40'
+          AD_CLICK_CHANCE: '35'
         run: node .github/scripts/traffic-bot.js
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "✅ GitHub Actions bot completed"
+          echo "Platform: GitHub Actions"
+          echo "Estimated time: 12-15 minutes"
