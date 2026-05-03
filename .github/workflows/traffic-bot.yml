@@ -1,0 +1,32 @@
+name: TraffiKing Auto Traffic Bot
+
+on:
+  schedule:
+    # Run every 2 hours (adjust as needed)
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Manual trigger
+  
+jobs:
+  generate-traffic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          npm install axios cheerio https-proxy-agent
+      
+      - name: Run Traffic Bot
+        env:
+          BLOG_URL: ${{ secrets.BLOG_URL || 'https://allai-info.blogspot.com' }}
+          SESSIONS: ${{ secrets.SESSIONS || '20' }}
+          PAGES_PER_SESSION: ${{ secrets.PAGES_PER_SESSION || '4' }}
+        run: node .github/scripts/traffic-bot.js
