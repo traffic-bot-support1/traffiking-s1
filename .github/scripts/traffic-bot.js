@@ -1,5 +1,6 @@
-const axios = require('axios');
-const { HttpsProxyAgent } = require('https-proxy-agent');
+const https = require('https');
+const http = require('http');
+const { URL } = require('url');
 
 class AutoTrafficBot {
     constructor() {
@@ -20,69 +21,112 @@ class AutoTrafficBot {
         console.log(`[${new Date().toISOString()}] ${message}`);
     }
 
+    async httpRequest(url, options = {}) {
+        return new Promise((resolve, reject) => {
+            const urlObj = new URL(url);
+            const protocol = urlObj.protocol === 'https:' ? https : http;
+            
+            const requestOptions = {
+                hostname: urlObj.hostname,
+                port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+                path: urlObj.pathname + urlObj.search,
+                method: options.method || 'GET',
+                headers: options.headers || {},
+                timeout: options.timeout || 15000
+            };
+
+            const req = protocol.request(requestOptions, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+                
+                res.on('end', () => {
+                    resolve({
+                        status: res.statusCode,
+                        data: data,
+                        headers: res.headers
+                    });
+                });
+            });
+
+            req.on('error', reject);
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Request timeout'));
+            });
+
+            req.end();
+        });
+    }
+
     async fetchProxies() {
         this.log('🔄 Fetching proxies from multiple sources...');
         
         const sources = [
-            'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/all/data.txt',
             'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
             'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt',
             'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-http.txt',
-            'https://api.proxyscrape.com/v2/?request=get&protocol=http&timeout=5000&country=all'
+            'https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt'
         ];
 
         const allProxies = [];
 
         for (const url of sources) {
             try {
-                const response = await axios.get(url, { timeout: 8000 });
-                const proxies = response.data
-                    .split('\n')
-                    .map(p => p.trim())
-                    .filter(p => p && p.match(/^\d+\.\d+\.\d+\.\d+:\d+$/));
+                const response = await this.httpRequest(url, { timeout: 10000 });
                 
-                allProxies.push(...proxies);
-                this.log(`✅ Fetched ${proxies.length} proxies from source`);
+                if (response.status === 200) {
+                    const proxies = response.data
+                        .split('\n')
+                        .map(p => p.trim())
+                        .filter(p => p && /^\d+\.\d+\.\d+\.\d+:\d+$/.test(p));
+                    
+                    allProxies.push(...proxies);
+                    this.log(`✅ Fetched ${proxies.length} proxies from source`);
+                }
             } catch (error) {
                 this.log(`⚠️ Failed to fetch from source: ${error.message}`);
             }
         }
 
-        // Remove duplicates and select best ones
-        this.proxies = [...new Set(allProxies)].slice(0, 100);
-        this.log(`✅ Total unique proxies: ${this.proxies.length}`);
+        // Remove duplicates and limit
+        this.proxies = [...new Set(allProxies)].slice(0, 50);
+        this.log(`✅ Total unique proxies loaded: ${this.proxies.length}`);
     }
 
     async fetchBlogPosts() {
         this.log(`🔍 Fetching posts from ${this.blogUrl}...`);
 
         try {
-            // Try Blogger JSON API
             const feedUrl = `${this.blogUrl}/feeds/posts/default?alt=json&max-results=50`;
-            const response = await axios.get(feedUrl, { timeout: 10000 });
+            const response = await this.httpRequest(feedUrl, { timeout: 10000 });
             
-            const entries = response.data.feed.entry || [];
-            this.posts = entries.map(entry => {
-                const links = entry.link || [];
-                const alternateLink = links.find(l => l.rel === 'alternate');
-                return alternateLink ? alternateLink.href : null;
-            }).filter(url => url !== null);
+            if (response.status === 200) {
+                const data = JSON.parse(response.data);
+                const entries = data.feed.entry || [];
+                
+                this.posts = entries.map(entry => {
+                    const links = entry.link || [];
+                    const alternateLink = links.find(l => l.rel === 'alternate');
+                    return alternateLink ? alternateLink.href : null;
+                }).filter(url => url !== null);
 
-            this.log(`✅ Found ${this.posts.length} posts`);
+                this.log(`✅ Found ${this.posts.length} posts`);
+            }
         } catch (error) {
-            this.log(`❌ Failed to fetch posts: ${error.message}`);
-            // Fallback to homepage
+            this.log(`⚠️ Failed to fetch posts, using homepage: ${error.message}`);
+            this.posts = [this.blogUrl];
+        }
+
+        if (this.posts.length === 0) {
             this.posts = [this.blogUrl];
         }
     }
 
-    getRandomProxy() {
-        if (this.proxies.length === 0) return null;
-        return this.proxies[Math.floor(Math.random() * this.proxies.length)];
-    }
-
-    getRandomPost() {
-        return this.posts[Math.floor(Math.random() * this.posts.length)];
+    getRandomItem(array) {
+        return array[Math.floor(Math.random() * array.length)];
     }
 
     getRandomUserAgent() {
@@ -91,145 +135,95 @@ class AutoTrafficBot {
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
             'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile Safari/604.1',
-            'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile Safari/604.1',
-            'Mozilla/5.0 (Android 13; Mobile; rv:109.0) Gecko/121.0 Firefox/121.0',
             'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
         ];
-        return agents[Math.floor(Math.random() * agents.length)];
+        return this.getRandomItem(agents);
     }
 
     getReferrer() {
         const referrers = [
-            'https://www.google.com/search?q=',
+            'https://www.google.com/search?q=blog',
             'https://www.google.com/',
             'https://www.facebook.com/',
             'https://twitter.com/',
-            'https://www.reddit.com/',
             ''
         ];
-        return referrers[Math.floor(Math.random() * referrers.length)];
+        return this.getRandomItem(referrers);
     }
 
-    async simulateAdClick(html, postUrl, config) {
-        // Extract Adsterra ad links from HTML
-        const adsterraPatterns = [
-            /href="(https?:\/\/[^"]*adsterra[^"]*)"/gi,
-            /href="(https?:\/\/[^"]*\.atdmt\.com[^"]*)"/gi,
-            /href="(https?:\/\/[^"]*\.ad-maven\.com[^"]*)"/gi,
-            /data-src="(https?:\/\/[^"]*adsterra[^"]*)"/gi
+    simulateAdInteraction(html) {
+        // Look for ad patterns in HTML
+        const adPatterns = [
+            /adsterra/gi,
+            /atdmt\.com/gi,
+            /ad-maven/gi,
+            /banner/gi,
+            /advertisement/gi
         ];
 
-        let adLinks = [];
-        for (const pattern of adsterraPatterns) {
-            const matches = html.matchAll(pattern);
-            for (const match of matches) {
-                if (match[1]) adLinks.push(match[1]);
+        let hasAds = false;
+        for (const pattern of adPatterns) {
+            if (pattern.test(html)) {
+                hasAds = true;
+                break;
             }
         }
 
-        // Also look for common ad container IDs/classes
-        const adContainerPatterns = [
-            /id="([^"]*ad[^"]*)"/gi,
-            /class="([^"]*ad[^"]*)"/gi
-        ];
-
-        if (adLinks.length === 0) {
-            // If no direct ad links, simulate click on ad containers
-            this.log(`📢 No direct ad links found, simulating ad container interaction`);
-            adLinks = ['ad-container-simulated'];
-        }
-
-        // Randomly click 0-2 ads per page (realistic behavior)
-        const adClickCount = Math.random() > 0.6 ? (Math.random() > 0.5 ? 1 : 2) : 0;
-        
-        for (let i = 0; i < adClickCount && i < adLinks.length; i++) {
-            const adLink = adLinks[Math.floor(Math.random() * adLinks.length)];
-            
-            try {
-                // Simulate ad click with realistic delay
-                await this.sleep(Math.random() * 3000 + 2000); // 2-5 seconds delay
-                
-                if (adLink === 'ad-container-simulated') {
-                    this.log(`🎯 Simulated ad container click`);
-                    this.stats.adClicks++;
-                } else {
-                    // Actually request the ad URL (don't follow redirects to save time)
-                    await axios.get(adLink, {
-                        ...config,
-                        maxRedirects: 0,
-                        validateStatus: () => true, // Accept any status
-                        timeout: 3000
-                    });
-                    this.log(`🎯 Clicked ad: ${adLink.substring(0, 50)}...`);
-                    this.stats.adClicks++;
-                }
-            } catch (error) {
-                // Silent fail for ad clicks
-                this.log(`⚠️ Ad click attempt (counts as interaction)`);
-                this.stats.adClicks++;
-            }
+        // Simulate 0-2 ad clicks per page (30% chance per ad)
+        if (hasAds && Math.random() > 0.3) {
+            const clicks = Math.random() > 0.7 ? 2 : 1;
+            this.stats.adClicks += clicks;
+            this.log(`🎯 Simulated ${clicks} ad interaction(s)`);
         }
     }
 
-    async visitPage(url, useProxy = true) {
-        const proxy = useProxy ? this.getRandomProxy() : null;
+    async visitPage(url) {
         const userAgent = this.getRandomUserAgent();
         const referrer = this.getReferrer();
 
-        const config = {
-            headers: {
-                'User-Agent': userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': referrer,
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            },
-            timeout: 15000,
-            maxRedirects: 5
+        const headers = {
+            'User-Agent': userAgent,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate',
+            'Referer': referrer,
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Cache-Control': 'max-age=0'
         };
-
-        if (proxy) {
-            config.httpsAgent = new HttpsProxyAgent(`http://${proxy}`);
-            config.proxy = false;
-        }
 
         try {
             const startTime = Date.now();
-            const response = await axios.get(url, config);
+            const response = await this.httpRequest(url, { 
+                headers, 
+                timeout: 15000 
+            });
             const responseTime = Date.now() - startTime;
 
-            if (response.status === 200) {
+            if (response.status === 200 || response.status === 301 || response.status === 302) {
                 this.stats.success++;
                 this.stats.total++;
 
-                // Simulate reading time (15-60 seconds)
-                const readTime = Math.random() * 45000 + 15000;
+                // Simulate ad interaction
+                this.simulateAdInteraction(response.data);
+
+                // Simulate reading time (20-60 seconds)
+                const readTime = Math.random() * 40000 + 20000;
                 this.log(`✅ Loaded: ${url.substring(0, 60)}... (${responseTime}ms) - Reading ${(readTime/1000).toFixed(1)}s`);
 
-                // Simulate ad clicks
-                await this.simulateAdClick(response.data, url, config);
-
-                // Simulate scrolling behavior
                 await this.sleep(readTime);
-
                 return true;
             } else {
                 this.stats.failed++;
                 this.stats.total++;
+                this.log(`⚠️ Failed: ${url} (Status: ${response.status})`);
                 return false;
             }
         } catch (error) {
             this.stats.failed++;
             this.stats.total++;
-            
-            if (useProxy && this.proxies.length > 0) {
-                // Retry without this proxy
-                this.log(`⚠️ Proxy failed, retrying without proxy...`);
-                return await this.visitPage(url, false);
-            }
-            
+            this.log(`❌ Error: ${error.message}`);
             return false;
         }
     }
@@ -239,30 +233,36 @@ class AutoTrafficBot {
     }
 
     async runSession(sessionNumber) {
-        this.log(`\n📱 Session ${sessionNumber}/${this.sessions}`);
+        this.log(`\n📱 Session ${sessionNumber}/${this.sessions} started`);
 
         for (let page = 1; page <= this.pagesPerSession; page++) {
-            const postUrl = this.getRandomPost();
+            const postUrl = this.getRandomItem(this.posts);
             
-            await this.visitPage(postUrl, true);
+            this.log(`📄 Page ${page}/${this.pagesPerSession}: ${postUrl.substring(0, 50)}...`);
+            await this.visitPage(postUrl);
 
             // Delay between pages (3-8 seconds)
             if (page < this.pagesPerSession) {
-                await this.sleep(Math.random() * 5000 + 3000);
+                const pageDelay = Math.random() * 5000 + 3000;
+                await this.sleep(pageDelay);
             }
         }
 
-        // Delay between sessions (15-45 seconds)
-        const sessionDelay = Math.random() * 30000 + 15000;
-        this.log(`⏳ Waiting ${(sessionDelay/1000).toFixed(1)}s before next session...`);
-        await this.sleep(sessionDelay);
+        // Delay between sessions (20-60 seconds)
+        if (sessionNumber < this.sessions) {
+            const sessionDelay = Math.random() * 40000 + 20000;
+            this.log(`⏳ Session complete. Waiting ${(sessionDelay/1000).toFixed(1)}s...`);
+            await this.sleep(sessionDelay);
+        }
     }
 
     async run() {
         this.log('👑 TraffiKing Auto Bot Starting...');
         this.log(`📝 Blog: ${this.blogUrl}`);
         this.log(`📊 Sessions: ${this.sessions}`);
-        this.log(`📄 Pages/Session: ${this.pagesPerSession}`);
+        this.log(`📄 Pages/Session: ${this.pagesPerSession}\n`);
+
+        const startTime = Date.now();
 
         // Initialize
         await this.fetchProxies();
@@ -270,27 +270,41 @@ class AutoTrafficBot {
 
         if (this.posts.length === 0) {
             this.log('❌ No posts found. Exiting.');
-            return;
+            process.exit(1);
         }
 
         // Run sessions
         for (let i = 1; i <= this.sessions; i++) {
-            await this.runSession(i);
+            try {
+                await this.runSession(i);
+            } catch (error) {
+                this.log(`❌ Session ${i} error: ${error.message}`);
+            }
         }
 
+        const totalTime = ((Date.now() - startTime) / 1000 / 60).toFixed(1);
+
         // Final stats
-        this.log('\n🎉 Bot completed!');
+        this.log('\n' + '='.repeat(60));
+        this.log('🎉 Bot Completed Successfully!');
+        this.log('='.repeat(60));
+        this.log(`⏱️  Total time: ${totalTime} minutes`);
         this.log(`📊 Total requests: ${this.stats.total}`);
         this.log(`✅ Successful: ${this.stats.success}`);
         this.log(`❌ Failed: ${this.stats.failed}`);
-        this.log(`🎯 Ad clicks: ${this.stats.adClicks}`);
-        this.log(`📈 Success rate: ${((this.stats.success/this.stats.total)*100).toFixed(1)}%`);
+        this.log(`🎯 Ad interactions: ${this.stats.adClicks}`);
+        this.log(`📈 Success rate: ${this.stats.total > 0 ? ((this.stats.success/this.stats.total)*100).toFixed(1) : 0}%`);
+        this.log(`📝 Unique posts visited: ${this.posts.length}`);
+        this.log('='.repeat(60));
     }
 }
 
 // Run the bot
 const bot = new AutoTrafficBot();
-bot.run().catch(error => {
-    console.error('Fatal error:', error);
+bot.run().then(() => {
+    console.log('✅ Process completed');
+    process.exit(0);
+}).catch(error => {
+    console.error('❌ Fatal error:', error.message);
     process.exit(1);
 });
