@@ -2,23 +2,41 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 
-class AutoTrafficBot {
+class TraffiKingImmortal {
     constructor() {
+        // Detect platform
+        this.platform = process.env.PLATFORM || 
+                       (process.env.TRAVIS === 'true' ? 'travis' : 'github');
+        
         this.blogUrl = process.env.BLOG_URL || 'https://allai-info.blogspot.com';
-        this.sessions = parseInt(process.env.SESSIONS || '20');
-        this.pagesPerSession = parseInt(process.env.PAGES_PER_SESSION || '4');
+        
+        // Platform-specific configurations
+        const isTravis = this.platform === 'travis';
+        
+        this.sessions = parseInt(process.env.SESSIONS || (isTravis ? '35' : '12'));
+        this.pagesPerSession = parseInt(process.env.PAGES_PER_SESSION || (isTravis ? '5' : '3'));
+        this.minReadTime = parseInt(process.env.MIN_READ_TIME || (isTravis ? '20' : '15'));
+        this.maxReadTime = parseInt(process.env.MAX_READ_TIME || (isTravis ? '60' : '40'));
+        this.adClickChance = parseInt(process.env.AD_CLICK_CHANCE || (isTravis ? '45' : '35'));
+        
         this.proxies = [];
         this.posts = [];
         this.stats = {
             total: 0,
             success: 0,
             failed: 0,
-            adClicks: 0
+            adClicks: 0,
+            adImpressions: 0,
+            uniquePosts: new Set(),
+            proxyUsed: 0
         };
+        
+        this.startTime = Date.now();
     }
 
     log(message) {
-        console.log(`[${new Date().toISOString()}] ${message}`);
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] ${message}`);
     }
 
     async httpRequest(url, options = {}) {
@@ -32,7 +50,7 @@ class AutoTrafficBot {
                 path: urlObj.pathname + urlObj.search,
                 method: options.method || 'GET',
                 headers: options.headers || {},
-                timeout: options.timeout || 15000
+                timeout: options.timeout || 12000
             };
 
             const req = protocol.request(requestOptions, (res) => {
@@ -54,7 +72,7 @@ class AutoTrafficBot {
             req.on('error', reject);
             req.on('timeout', () => {
                 req.destroy();
-                reject(new Error('Request timeout'));
+                reject(new Error('Timeout'));
             });
 
             req.end();
@@ -62,7 +80,7 @@ class AutoTrafficBot {
     }
 
     async fetchProxies() {
-        this.log('🔄 Fetching proxies from multiple sources...');
+        this.log('🔄 Fetching proxies...');
         
         const sources = [
             'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
@@ -75,7 +93,7 @@ class AutoTrafficBot {
 
         for (const url of sources) {
             try {
-                const response = await this.httpRequest(url, { timeout: 10000 });
+                const response = await this.httpRequest(url, { timeout: 8000 });
                 
                 if (response.status === 200) {
                     const proxies = response.data
@@ -84,16 +102,14 @@ class AutoTrafficBot {
                         .filter(p => p && /^\d+\.\d+\.\d+\.\d+:\d+$/.test(p));
                     
                     allProxies.push(...proxies);
-                    this.log(`✅ Fetched ${proxies.length} proxies from source`);
                 }
             } catch (error) {
-                this.log(`⚠️ Failed to fetch from source: ${error.message}`);
+                // Continue with other sources
             }
         }
 
-        // Remove duplicates and limit
         this.proxies = [...new Set(allProxies)].slice(0, 50);
-        this.log(`✅ Total unique proxies loaded: ${this.proxies.length}`);
+        this.log(`✅ Loaded ${this.proxies.length} proxies`);
     }
 
     async fetchBlogPosts() {
@@ -113,10 +129,10 @@ class AutoTrafficBot {
                     return alternateLink ? alternateLink.href : null;
                 }).filter(url => url !== null);
 
-                this.log(`✅ Found ${this.posts.length} posts`);
+                this.log(`✅ Found ${this.posts.length} blog posts`);
             }
         } catch (error) {
-            this.log(`⚠️ Failed to fetch posts, using homepage: ${error.message}`);
+            this.log(`⚠️ Feed error, using homepage`);
             this.posts = [this.blogUrl];
         }
 
@@ -132,48 +148,77 @@ class AutoTrafficBot {
     getRandomUserAgent() {
         const agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile Safari/604.1',
-            'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.119 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (iPad; CPU OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.144 Mobile Safari/537.36'
         ];
         return this.getRandomItem(agents);
     }
 
     getReferrer() {
         const referrers = [
-            'https://www.google.com/search?q=blog',
+            'https://www.google.com/search?q=artificial+intelligence+news',
+            'https://www.google.com/search?q=ai+updates+2024',
+            'https://www.google.com/search?q=machine+learning+blog',
+            'https://www.google.com/search?q=tech+news',
             'https://www.google.com/',
+            'https://www.bing.com/search?q=ai+news',
             'https://www.facebook.com/',
             'https://twitter.com/',
-            ''
+            'https://www.reddit.com/r/artificial',
+            'https://www.reddit.com/r/technology',
+            'https://news.ycombinator.com/',
+            'https://www.linkedin.com/',
+            ''  // Direct traffic
         ];
         return this.getRandomItem(referrers);
     }
 
-    simulateAdInteraction(html) {
-        // Look for ad patterns in HTML
+    detectAndSimulateAds(html) {
+        // Count ad impressions
         const adPatterns = [
             /adsterra/gi,
             /atdmt\.com/gi,
             /ad-maven/gi,
-            /banner/gi,
-            /advertisement/gi
+            /adsense/gi,
+            /doubleclick/gi,
+            /googlesyndication/gi
         ];
 
-        let hasAds = false;
+        let adCount = 0;
         for (const pattern of adPatterns) {
-            if (pattern.test(html)) {
-                hasAds = true;
-                break;
+            const matches = html.match(pattern);
+            if (matches) {
+                adCount += matches.length;
             }
         }
 
-        // Simulate 0-2 ad clicks per page (30% chance per ad)
-        if (hasAds && Math.random() > 0.3) {
-            const clicks = Math.random() > 0.7 ? 2 : 1;
-            this.stats.adClicks += clicks;
-            this.log(`🎯 Simulated ${clicks} ad interaction(s)`);
+        if (adCount > 0) {
+            this.stats.adImpressions += adCount;
+        }
+
+        // Simulate realistic ad clicks
+        const shouldClick = Math.random() * 100 < this.adClickChance;
+        
+        if (shouldClick && adCount > 0) {
+            // Click 1-3 ads per page
+            const clickCount = Math.min(
+                Math.floor(Math.random() * 3) + 1,
+                adCount
+            );
+            
+            this.stats.adClicks += clickCount;
+            this.log(`🎯 Ad interaction: ${clickCount} click(s) on ${adCount} ad(s)`);
         }
     }
 
@@ -183,14 +228,19 @@ class AutoTrafficBot {
 
         const headers = {
             'User-Agent': userAgent,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Encoding': 'gzip, deflate, br',
             'Referer': referrer,
             'DNT': '1',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
-            'Cache-Control': 'max-age=0'
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'cross-site',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+            'TE': 'trailers'
         };
 
         try {
@@ -201,29 +251,49 @@ class AutoTrafficBot {
             });
             const responseTime = Date.now() - startTime;
 
-            if (response.status === 200 || response.status === 301 || response.status === 302) {
+            if (response.status >= 200 && response.status < 400) {
                 this.stats.success++;
                 this.stats.total++;
+                this.stats.uniquePosts.add(url);
 
-                // Simulate ad interaction
-                this.simulateAdInteraction(response.data);
+                // Detect and simulate ads
+                this.detectAndSimulateAds(response.data);
 
-                // Simulate reading time (20-60 seconds)
-                const readTime = Math.random() * 40000 + 20000;
-                this.log(`✅ Loaded: ${url.substring(0, 60)}... (${responseTime}ms) - Reading ${(readTime/1000).toFixed(1)}s`);
+                // Realistic reading time with variation
+                const baseReadTime = this.minReadTime + 
+                    Math.random() * (this.maxReadTime - this.minReadTime);
+                
+                // Add some natural variation (±20%)
+                const variation = baseReadTime * 0.2;
+                const readTime = (baseReadTime + (Math.random() * variation * 2 - variation)) * 1000;
+                
+                const postName = url.split('/').filter(p => p).pop().substring(0, 30);
+                this.log(`✅ ${postName}... (${responseTime}ms) - Reading ${(readTime/1000).toFixed(1)}s`);
 
-                await this.sleep(readTime);
+                // Simulate reading with occasional "scrolling" pauses
+                const scrolls = Math.floor(readTime / 15000); // Scroll every 15s
+                for (let i = 0; i < scrolls; i++) {
+                    await this.sleep(15000);
+                    if (i < scrolls - 1) {
+                        // Simulate scroll action (just a pause)
+                    }
+                }
+                
+                // Remaining time
+                const remaining = readTime - (scrolls * 15000);
+                if (remaining > 0) {
+                    await this.sleep(remaining);
+                }
+
                 return true;
             } else {
                 this.stats.failed++;
                 this.stats.total++;
-                this.log(`⚠️ Failed: ${url} (Status: ${response.status})`);
                 return false;
             }
         } catch (error) {
             this.stats.failed++;
             this.stats.total++;
-            this.log(`❌ Error: ${error.message}`);
             return false;
         }
     }
@@ -233,78 +303,108 @@ class AutoTrafficBot {
     }
 
     async runSession(sessionNumber) {
-        this.log(`\n📱 Session ${sessionNumber}/${this.sessions} started`);
+        this.log(`\n📱 Session ${sessionNumber}/${this.sessions}`);
 
         for (let page = 1; page <= this.pagesPerSession; page++) {
             const postUrl = this.getRandomItem(this.posts);
             
-            this.log(`📄 Page ${page}/${this.pagesPerSession}: ${postUrl.substring(0, 50)}...`);
             await this.visitPage(postUrl);
 
-            // Delay between pages (3-8 seconds)
+            // Natural delay between pages (3-8 seconds)
             if (page < this.pagesPerSession) {
                 const pageDelay = Math.random() * 5000 + 3000;
                 await this.sleep(pageDelay);
             }
         }
 
-        // Delay between sessions (20-60 seconds)
+        // Natural delay between sessions (15-45 seconds)
         if (sessionNumber < this.sessions) {
-            const sessionDelay = Math.random() * 40000 + 20000;
-            this.log(`⏳ Session complete. Waiting ${(sessionDelay/1000).toFixed(1)}s...`);
+            const sessionDelay = Math.random() * 30000 + 15000;
+            const delaySeconds = (sessionDelay / 1000).toFixed(1);
+            this.log(`⏳ Session complete. Next in ${delaySeconds}s...`);
             await this.sleep(sessionDelay);
         }
     }
 
     async run() {
-        this.log('👑 TraffiKing Auto Bot Starting...');
+        this.log('👑 TraffiKing IMMORTAL MODE Starting...');
+        this.log(`🖥️  Platform: ${this.platform.toUpperCase()}`);
         this.log(`📝 Blog: ${this.blogUrl}`);
-        this.log(`📊 Sessions: ${this.sessions}`);
-        this.log(`📄 Pages/Session: ${this.pagesPerSession}\n`);
+        this.log(`📊 Configuration: ${this.sessions} sessions × ${this.pagesPerSession} pages`);
+        this.log(`⏱️  Read time: ${this.minReadTime}-${this.maxReadTime}s per page`);
+        this.log(`🎯 Ad click chance: ${this.adClickChance}%`);
+        
+        if (this.platform === 'travis') {
+            this.log(`🚀 Travis CI Build #${process.env.TRAVIS_BUILD_NUMBER || 'N/A'}`);
+        } else {
+            this.log(`🚀 GitHub Actions Run`);
+        }
+        
+        this.log('');
 
-        const startTime = Date.now();
-
-        // Initialize
-        await this.fetchProxies();
-        await this.fetchBlogPosts();
+        // Initialize in parallel for speed
+        await Promise.all([
+            this.fetchProxies(),
+            this.fetchBlogPosts()
+        ]);
 
         if (this.posts.length === 0) {
             this.log('❌ No posts found. Exiting.');
             process.exit(1);
         }
 
-        // Run sessions
+        // Run all sessions
         for (let i = 1; i <= this.sessions; i++) {
             try {
                 await this.runSession(i);
             } catch (error) {
-                this.log(`❌ Session ${i} error: ${error.message}`);
+                this.log(`⚠️ Session ${i} error: ${error.message}`);
             }
         }
 
-        const totalTime = ((Date.now() - startTime) / 1000 / 60).toFixed(1);
+        // Final statistics
+        this.printFinalStats();
+    }
 
-        // Final stats
+    printFinalStats() {
+        const totalTime = ((Date.now() - this.startTime) / 1000 / 60).toFixed(1);
+        const successRate = this.stats.total > 0 ? 
+            ((this.stats.success / this.stats.total) * 100).toFixed(1) : 0;
+        
+        const ctr = this.stats.adImpressions > 0 ?
+            ((this.stats.adClicks / this.stats.adImpressions) * 100).toFixed(1) : 0;
+
         this.log('\n' + '='.repeat(60));
-        this.log('🎉 Bot Completed Successfully!');
+        this.log('🎉 TRAFFIKING IMMORTAL - SESSION COMPLETED!');
         this.log('='.repeat(60));
-        this.log(`⏱️  Total time: ${totalTime} minutes`);
-        this.log(`📊 Total requests: ${this.stats.total}`);
-        this.log(`✅ Successful: ${this.stats.success}`);
-        this.log(`❌ Failed: ${this.stats.failed}`);
-        this.log(`🎯 Ad interactions: ${this.stats.adClicks}`);
-        this.log(`📈 Success rate: ${this.stats.total > 0 ? ((this.stats.success/this.stats.total)*100).toFixed(1) : 0}%`);
-        this.log(`📝 Unique posts visited: ${this.posts.length}`);
+        this.log(`🖥️  Platform: ${this.platform.toUpperCase()}`);
+        this.log(`⏱️  Duration: ${totalTime} minutes`);
+        this.log(`📊 Page Views: ${this.stats.success}/${this.stats.total} (${successRate}% success)`);
+        this.log(`📝 Unique Posts: ${this.stats.uniquePosts.size}`);
+        this.log(`👁️  Ad Impressions: ${this.stats.adImpressions}`);
+        this.log(`🎯 Ad Clicks: ${this.stats.adClicks}`);
+        this.log(`📈 CTR: ${ctr}%`);
+        this.log(`🔒 Proxies Available: ${this.proxies.length}`);
         this.log('='.repeat(60));
+        
+        // Platform-specific info
+        if (this.platform === 'travis') {
+            this.log(`💡 Travis CI: Using ~${totalTime} of 10,000 free minutes`);
+        } else {
+            this.log(`💡 GitHub Actions: Using ~${totalTime} of 2,000 free minutes`);
+        }
+        
+        this.log('='.repeat(60) + '\n');
     }
 }
 
 // Run the bot
-const bot = new AutoTrafficBot();
+const bot = new TraffiKingImmortal();
 bot.run().then(() => {
-    console.log('✅ Process completed');
+    console.log('✅ Process completed successfully');
     process.exit(0);
 }).catch(error => {
     console.error('❌ Fatal error:', error.message);
+    console.error(error.stack);
     process.exit(1);
 });
